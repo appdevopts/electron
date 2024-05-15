@@ -8,7 +8,7 @@ else
   BUILD_TYPE="mas"
 fi
 
-if [ -z "$TARGET_ARCH" && "$TARGET_ARCH" == "x64" ]; then
+if [[ -z "$TARGET_ARCH" && "$TARGET_ARCH" == "x64" ]]; then
   ARCH="x64"
 else
   ARCH="arm64"

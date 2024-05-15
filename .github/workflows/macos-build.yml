@@ -32,7 +32,7 @@ env:
   ELECTRON_RBE_JWT: ${{ secrets.ELECTRON_RBE_JWT }}
   # Disable pre-compiled headers to reduce out size - only useful for rebuilds
   GN_BUILDFLAG_ARGS: 'enable_precompiled_headers = false'
-  GCLIENT_EXTRA_ARGS: '--custom-var=checkout_mac=True --custom-var=host_os=mac --custom-var=host_cpu=arm64'
+  GCLIENT_EXTRA_ARGS: '--custom-var=checkout_mac=True --custom-var=host_os=mac'
   CHECK_DIST_MANIFEST: '1'
 
 jobs:
@@ -209,6 +209,18 @@ jobs:
       run: |
         cd src/electron
         node script/yarn install
+    - name: Load Target Arch & CPU
+      run: |
+        ARCH=$(uname -m)
+        if [ "$ARCH" == "x86_64" ]; then
+          echo "TARGET_ARCH="x64"" >> $GITHUB_ENV
+          echo "target_cpu="x64"" >> $GITHUB_ENV
+          echo "host_cpu="x64"" >> $GITHUB_ENV
+        else
+          echo "TARGET_ARCH="arm64"" >> $GITHUB_ENV
+          echo "target_cpu="arm64"" >> $GITHUB_ENV
+          echo "host_cpu="arm64"" >> $GITHUB_ENV
+        fi
     - name: Get Depot Tools
       timeout-minutes: 5
       run: |
@@ -441,18 +453,11 @@ jobs:
         node electron/script/check-symlinks.js
     - name: Build Electron dist.zip (darwin)
       run: |
-        ARCH=$(uname -m)
-        echo "$ARCH"
-        echo "${{ runner.arch }}"
         cd src
         e build electron:electron_dist_zip -j $NUMBER_OF_NINJA_PROCESSES
         if [ "$CHECK_DIST_MANIFEST" == "1" ]; then
           target_os=mac
-          target_cpu=arm64
-          if [ ${{ runner.arch }} == "X64" ]; then
-            target_cpu=x64
-          fi
-          electron/script/zip_manifests/check-zip-manifest.py out/Default/dist.zip electron/script/zip_manifests/dist_zip.$target_os.$target_cpu.manifest
+          electron/script/zip_manifests/check-zip-manifest.py out/Default/dist.zip electron/script/zip_manifests/dist_zip.$target_os.${{ env.TARGET_ARCH }}.manifest
         fi
     - name: Build Mksnapshot (darwin)
       run: |
@@ -558,18 +563,11 @@ jobs:
     # Additional Targets: shell_browser_ui_unittests third_party/electron_node:headers third_party/electron_node:overlapped-checker electron:hunspell_dictionaries_zip
     - name: Build Electron dist.zip (mas)
       run: |
-        TARGET_ARCH=$(uname -m)
-        echo "$TARGET_ARCH" >> $GITHUB_ENV
-        echo "${{ runner.arch }}"
         cd src
         e build electron:electron_dist_zip -j $NUMBER_OF_NINJA_PROCESSES
         if [ "$CHECK_DIST_MANIFEST" == "1" ]; then
           target_os=mac_mas
-          target_cpu=arm64
-          if [ ${{ runner.arch }} == "X64" ]; then
-            target_cpu=x64
-          fi
-          electron/script/zip_manifests/check-zip-manifest.py out/Default/dist.zip electron/script/zip_manifests/dist_zip.$target_os.$target_cpu.manifest
+          electron/script/zip_manifests/check-zip-manifest.py out/Default/dist.zip electron/script/zip_manifests/dist_zip.$target_os.${{ env.TARGET_ARCH }}.manifest
         fi
     - name: Build Mksnapshot (mas)
       run: |
